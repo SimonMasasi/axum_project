@@ -1,8 +1,7 @@
 
 pub mod config;
 pub mod db;
-pub mod dto;
-pub mod entities;
 pub mod error;
+pub mod modules;
 pub mod routes;
 pub mod state;

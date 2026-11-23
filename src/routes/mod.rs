@@ -2,10 +2,10 @@ use axum::{Json, Router, routing::get};
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 
-use crate::state::AppState;
-
-mod health;
-mod users;
+use crate::{
+    modules::{auth::views::users, health::views as health, auth::views::roles},
+    state::AppState,
+};
 
 /// Path the generated OpenAPI document is served at.
 pub const OPENAPI_PATH: &str = "/api-docs/openapi.json";
@@ -23,6 +23,7 @@ pub const OPENAPI_PATH: &str = "/api-docs/openapi.json";
         users::create_user,
         users::update_user,
         users::delete_user,
+        roles::list_all_roles,
     ),
     tags(
         (name = "health", description = "Service health"),
@@ -35,6 +36,7 @@ pub fn router(state: AppState) -> Router {
     Router::new()
         .route("/health", get(health::health))
         .nest("/users", users::router())
+        .nest("/roles", roles::router())
         .route(OPENAPI_PATH, get(|| async { Json(ApiDoc::openapi()) }))
         .layer(TraceLayer::new_for_http())
         .with_state(state)

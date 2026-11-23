@@ -4,12 +4,13 @@ use axum::{
     http::StatusCode,
     routing::get,
 };
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, EntityTrait, IntoActiveModel, QueryOrder};
 
 use crate::{
-    dto::user::{CreateUser, UpdateUser, UserResponse},
-    entities::user,
-    error::{AppError, AppJson, AppResult, ErrorResponse},
+    error::{AppJson, AppResult, ErrorResponse},
+    modules::auth::{
+        dtos::users::{CreateUser, UpdateUser, UserResponse},
+        services::users as user_service,
+    },
     state::AppState,
 };
 
@@ -22,6 +23,7 @@ pub fn router() -> Router<AppState> {
         )
 }
 
+
 /// List all users, ordered by id.
 #[utoipa::path(
     get,
@@ -32,11 +34,7 @@ pub fn router() -> Router<AppState> {
     )
 )]
 async fn list_users(State(state): State<AppState>) -> AppResult<AppJson<Vec<UserResponse>>> {
-    let users = user::Entity::find()
-        .order_by_asc(user::Column::Id)
-        .all(&state.db)
-        .await?; // DbErr -> AppError::Database automatically
-
+    let users = user_service::list(&state.db).await?;
     Ok(AppJson(users.into_iter().map(Into::into).collect()))
 }
 
@@ -57,7 +55,7 @@ async fn get_user(
     State(state): State<AppState>,
     Path(id): Path<i32>,
 ) -> AppResult<AppJson<UserResponse>> {
-    let user = find_user(&state, id).await?;
+    let user = user_service::get(&state.db, id).await?;
     Ok(AppJson(user.into()))
 }
 
@@ -78,17 +76,7 @@ async fn create_user(
     State(state): State<AppState>,
     AppJson(input): AppJson<CreateUser>,
 ) -> AppResult<(StatusCode, AppJson<UserResponse>)> {
-    let input = input.validate()?;
-
-    let new_user = user::ActiveModel {
-        username: Set(input.username),
-        email: Set(input.email),
-        // id, is_active and created_at are filled in by the database defaults
-        ..Default::default()
-    };
-    // A duplicate username/email becomes a 409 Conflict (see error.rs).
-    let created = new_user.insert(&state.db).await?;
-
+    let created = user_service::create(&state.db, input).await?;
     Ok((StatusCode::CREATED, AppJson(created.into())))
 }
 
@@ -114,20 +102,7 @@ async fn update_user(
     Path(id): Path<i32>,
     AppJson(input): AppJson<UpdateUser>,
 ) -> AppResult<AppJson<UserResponse>> {
-    let input = input.validate()?;
-    let mut user = find_user(&state, id).await?.into_active_model();
-
-    if let Some(username) = input.username {
-        user.username = Set(username);
-    }
-    if let Some(email) = input.email {
-        user.email = Set(email);
-    }
-    if let Some(is_active) = input.is_active {
-        user.is_active = Set(is_active);
-    }
-
-    let updated = user.update(&state.db).await?;
+    let updated = user_service::update(&state.db, id, input).await?;
     Ok(AppJson(updated.into()))
 }
 
@@ -145,21 +120,6 @@ async fn update_user(
     )
 )]
 async fn delete_user(State(state): State<AppState>, Path(id): Path<i32>) -> AppResult<StatusCode> {
-    let result = user::Entity::delete_by_id(id).exec(&state.db).await?;
-    if result.rows_affected == 0 {
-        return Err(user_not_found(id));
-    }
+    user_service::delete(&state.db, id).await?;
     Ok(StatusCode::NO_CONTENT)
-}
-
-/// Loads a user or returns a 404 `AppError`.
-async fn find_user(state: &AppState, id: i32) -> AppResult<user::Model> {
-    user::Entity::find_by_id(id)
-        .one(&state.db)
-        .await?
-        .ok_or_else(|| user_not_found(id))
-}
-
-fn user_not_found(id: i32) -> AppError {
-    AppError::NotFound(format!("user {id} not found"))
 }

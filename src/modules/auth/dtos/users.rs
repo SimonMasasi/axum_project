@@ -2,7 +2,7 @@ use sea_orm::prelude::DateTime;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::{entities::user, error::AppError};
+use crate::{error::AppError, modules::auth::models::users};
 
 #[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -14,8 +14,8 @@ pub struct UserResponse {
     pub created_at: DateTime,
 }
 
-impl From<user::Model> for UserResponse {
-    fn from(m: user::Model) -> Self {
+impl From<users::Model> for UserResponse {
+    fn from(m: users::Model) -> Self {
         Self {
             id: m.id,
             username: m.username,
@@ -26,15 +26,14 @@ impl From<user::Model> for UserResponse {
     }
 }
 
-/// Body of `POST /users`.
 #[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateUser {
     /// 3–32 characters; surrounding whitespace is trimmed.
-    #[schema(example = "simon", min_length = 3, max_length = 32)]
+    #[schema(example = "john", min_length = 3, max_length = 32)]
     pub username: String,
     /// Stored lower-cased.
-    #[schema(example = "simon@example.com")]
+    #[schema(example = "johndoe@example.com")]
     pub email: String,
 }
 
@@ -46,7 +45,6 @@ impl CreateUser {
     }
 }
 
-/// Body of `PATCH /users/{id}`. Omitted fields are left unchanged.
 #[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateUser {

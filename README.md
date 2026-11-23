@@ -10,26 +10,6 @@ cargo run              # applies pending migrations, then starts on 127.0.0.1:30
 cargo test             # integration tests against an in-memory database
 ```
 
-## Layout
-
-```
-Cargo.toml              workspace: the app + the migration crate
-migration/              SeaORM migrations (their own crate + CLI)
-  src/lib.rs            Migrator: the ordered list of migrations
-  src/m2026..._*.rs     one file per schema change
-src/
-  main.rs               entrypoint: config, logging, DB, serve
-  lib.rs                module tree (lets tests use the app)
-  config.rs             env vars -> Config
-  db.rs                 connection pool + auto-migrate
-  state.rs              AppState shared by handlers
-  error.rs              AppError + AppJson: every error is JSON
-  entities/             SeaORM models, one per table
-  dto/                  API request/response types + validation
-  routes/               router + handlers, one file per feature
-tests/                  HTTP-level integration tests
-```
-
 Adding a feature (e.g. posts): migration -> `entities/post.rs` -> `dto/post.rs`
 -> `routes/posts.rs` -> `.nest("/posts", posts::router())` in `routes/mod.rs`.
 

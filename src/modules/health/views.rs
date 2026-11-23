@@ -4,6 +4,7 @@ use utoipa::ToSchema;
 
 use crate::{
     error::{AppResult, ErrorResponse},
+    modules::health::services,
     state::AppState,
 };
 
@@ -24,7 +25,7 @@ pub struct HealthResponse {
     )
 )]
 pub async fn health(State(state): State<AppState>) -> AppResult<Json<HealthResponse>> {
-    state.db.ping().await?;
+    services::check(&state.db).await?;
     Ok(Json(HealthResponse {
         status: "ok".into(),
     }))
