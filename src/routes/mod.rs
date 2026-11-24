@@ -24,6 +24,9 @@ pub const OPENAPI_PATH: &str = "/api-docs/openapi.json";
         users::update_user,
         users::delete_user,
         roles::list_all_roles,
+        roles::find_role_by_id,
+        roles::create_role,
+        roles::update_role,
     ),
     tags(
         (name = "health", description = "Service health"),
