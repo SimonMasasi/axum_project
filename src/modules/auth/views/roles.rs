@@ -4,8 +4,8 @@ use axum::{
 
 use crate::{
     error::{AppJson, AppResult, ErrorResponse}, modules::auth::{
-        dtos::{roles::{CreateRoleInput, RolesResponse}}, services::roles as roles_service,
-    }, state::AppState,
+        dtos::roles::{CreateRoleInput, RolesResponse}, services::roles as roles_service,
+    }, state::{AppState},
 };
 
 
@@ -13,7 +13,7 @@ use crate::{
 pub fn router () -> Router<AppState>{
     Router::new()
     .route("/", get(list_all_roles).post(create_role))
-    .route("/{id}", get(find_role_by_id).patch(update_role))
+    .route("/{id}", get(find_role_by_id).patch(update_role).delete(delete_role))
 }
 
 
@@ -97,4 +97,24 @@ async  fn update_role(State(state):State<AppState> , Path(id):Path<i32> , AppJso
     let updated_role = roles_service::update_role(&state.db, id, input).await?;
 
     Ok(AppJson(updated_role.into()))
+}
+
+
+/// Delete a Role.
+#[utoipa::path(
+    delete,
+    path = "/roles/{id}",
+    tag = "roles",
+    params(
+        ("id" = i32, Path, description = "Role id"),
+    ),
+    responses(
+        (status = 204, description = "Role deleted"),
+        (status = 404, description = "Role not found", body = ErrorResponse),
+    )
+)]
+
+async fn delete_role(State(state) :State<AppState>, Path(id):Path<i32>) -> AppResult<StatusCode>{
+    roles_service::delete_role_by_id(&state.db, id).await?;
+    Ok(StatusCode::NO_CONTENT)
 }

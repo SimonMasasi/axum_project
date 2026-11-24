@@ -57,6 +57,19 @@ pub async fn  update_role(db: &impl  ConnectionTrait , id:i32 , input:CreateRole
 }
 
 
+pub   async  fn  delete_role_by_id(db:&impl ConnectionTrait , id:i32) -> AppResult<()>{
+    let results = roles::Entity::delete_by_id(id)
+    .exec(db)
+    .await? ;
+
+    if results.rows_affected ==0{
+        return  Err(not_found(id));
+    }
+
+    Ok(())
+}
+
+
 fn not_found (id:i32) -> AppError{
     AppError::NotFound(format!("role {id} not found"))
 }
