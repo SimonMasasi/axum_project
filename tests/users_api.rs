@@ -22,7 +22,15 @@ async fn test_app() -> Router {
     opts.max_connections(1).min_connections(1).sqlx_logging(false);
     let db = Database::connect(opts).await.unwrap();
     Migrator::up(&db, None).await.unwrap();
-    routes::router(AppState { db })
+    // These tests don't touch files, so a bucket handle that's never used is fine
+    // (creating one doesn't connect to anything).
+    let bucket = s3::Bucket::new(
+        "test",
+        s3::Region::Custom { region: "us-east-1".into(), endpoint: "http://127.0.0.1:1".into() },
+        s3::creds::Credentials::new(Some("x"), Some("x"), None, None, None).unwrap(),
+    )
+    .unwrap();
+    routes::router(AppState { db, bucket })
 }
 
 async fn send(app: &Router, method: &str, uri: &str, body: Option<Value>) -> (StatusCode, Value) {

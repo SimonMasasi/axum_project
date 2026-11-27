@@ -5,6 +5,11 @@ pub struct Config {
     pub database_url: String,
     pub addr: String,
     pub run_migrations: bool,
+    // RustFS (S3-compatible) storage settings
+    pub s3_endpoint: String,
+    pub s3_access_key: String,
+    pub s3_secret_key: String,
+    pub s3_bucket: String,
 }
 
 impl Config {
@@ -22,10 +27,17 @@ impl Config {
             .map(|v| v != "false" && v != "0")
             .unwrap_or(true);
 
+        // Small helper: read an env var or fall back to a default value.
+        let env_or = |key: &str, default: &str| std::env::var(key).unwrap_or_else(|_| default.to_string());
+
         Ok(Self {
             database_url,
             addr: format!("{host}:{port}"),
             run_migrations,
+            s3_endpoint: env_or("S3_ENDPOINT", "http://127.0.0.1:9000"),
+            s3_access_key: env_or("S3_ACCESS_KEY", "admin"),
+            s3_secret_key: env_or("S3_SECRET_KEY", "rustfadmin"),
+            s3_bucket: env_or("S3_BUCKET", "uploads"),
         })
     }
 }

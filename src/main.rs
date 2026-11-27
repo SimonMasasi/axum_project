@@ -1,5 +1,5 @@
 use anyhow::Context;
-use axum_project::{config::Config, db, routes, state::AppState};
+use axum_project::{config::Config, db, routes, state::AppState, storage};
 use serde_json::json;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 use axum::{response::Html, routing::get};
@@ -22,12 +22,13 @@ async fn main() -> anyhow::Result<()> {
     let scalar_config = json!({ "url": routes::OPENAPI_PATH });
 
     let db = db::connect(&config).await?;
+    let bucket = storage::connect(&config).await?;
 
     // The published scalar_api_reference crate doesn't ship `ui/scalar.js`, so
     // `scalar_api_reference::axum::router` 404s on `/docs/scalar.js`. Serve the
     // HTML ourselves and load the JS bundle from the jsDelivr CDN instead.
     let docs_html = scalar_html_default(&scalar_config);
-    let app = routes::router(AppState { db })
+    let app = routes::router(AppState { db, bucket })
         .route("/docs", get(move || async move { Html(docs_html) }));
 
     let listener = tokio::net::TcpListener::bind(&config.addr)

@@ -1,9 +1,10 @@
 use axum::{
     Json,
-    extract::{FromRequest, rejection::JsonRejection},
+    extract::{FromRequest, multipart::MultipartError, rejection::JsonRejection},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use s3::error::S3Error;
 use sea_orm::{DbErr, SqlErr};
 use serde::Serialize;
 use utoipa::ToSchema;
@@ -25,6 +26,14 @@ pub enum AppError {
 
     #[error(transparent)]
     Database(#[from] DbErr),
+
+    /// The upload form was malformed or the file was too big.
+    #[error(transparent)]
+    Multipart(#[from] MultipartError),
+
+    /// Something went wrong talking to RustFS (file storage).
+    #[error(transparent)]
+    Storage(#[from] S3Error),
 }
 
 pub type AppResult<T> = Result<T, AppError>;
@@ -71,6 +80,21 @@ impl IntoResponse for AppError {
                         "something went wrong".to_string(),
                     )
                 }
+            }
+            AppError::Multipart(err) => (err.status(), "bad_request", err.body_text()),
+            // RustFS answers 404 when the file doesn't exist.
+            AppError::Storage(S3Error::HttpFailWithBody(404, _)) => (
+                StatusCode::NOT_FOUND,
+                "not_found",
+                "file not found".to_string(),
+            ),
+            AppError::Storage(err) => {
+                tracing::error!(error = ?err, "storage error");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "internal_error",
+                    "something went wrong".to_string(),
+                )
             }
         };
 

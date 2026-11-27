@@ -2,6 +2,8 @@ pub use sea_orm_migration::prelude::*;
 
 mod m20261119_080453_create_users_table;
 mod m20261123_115707_create_roles_table;
+mod m20261127_073500_create_files_table;
+mod m20261127_134808_create_email_settings;
 
 pub struct Migrator;
 
@@ -12,6 +14,8 @@ impl MigratorTrait for Migrator {
         vec![
             Box::new(m20261119_080453_create_users_table::Migration),
             Box::new(m20261123_115707_create_roles_table::Migration),
+            Box::new(m20261127_073500_create_files_table::Migration),
+            Box::new(m20261127_134808_create_email_settings::Migration),
         ]
     }
 }

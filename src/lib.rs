@@ -5,3 +5,4 @@ pub mod error;
 pub mod modules;
 pub mod routes;
 pub mod state;
+pub mod storage;

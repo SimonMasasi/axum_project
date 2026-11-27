@@ -1,8 +1,3 @@
-//! User business logic. Nothing here knows about HTTP: functions take a
-//! connection plus plain input, and return models or an `AppError`.
-//!
-//! `db` is any `ConnectionTrait`, so these work with the pool or inside a
-//! transaction.
 
 use sea_orm::{
     ActiveModelTrait, ActiveValue::Set, ConnectionTrait, EntityTrait, IntoActiveModel, QueryOrder,
@@ -16,7 +11,6 @@ use crate::{
     },
 };
 
-/// All users, ordered by id.
 pub async fn list(db: &impl ConnectionTrait) -> AppResult<Vec<users::Model>> {
     let users = users::Entity::find()
         .order_by_asc(users::Column::Id)
@@ -25,7 +19,6 @@ pub async fn list(db: &impl ConnectionTrait) -> AppResult<Vec<users::Model>> {
     Ok(users)
 }
 
-/// Loads a user or returns `AppError::NotFound`.
 pub async fn get(db: &impl ConnectionTrait, id: i32) -> AppResult<users::Model> {
     users::Entity::find_by_id(id)
         .one(db)
@@ -33,7 +26,6 @@ pub async fn get(db: &impl ConnectionTrait, id: i32) -> AppResult<users::Model> 
         .ok_or_else(|| not_found(id))
 }
 
-/// Validates the input and inserts a user.
 pub async fn create(db: &impl ConnectionTrait, input: CreateUser) -> AppResult<users::Model> {
     let input = input.validate()?;
 
@@ -47,7 +39,6 @@ pub async fn create(db: &impl ConnectionTrait, input: CreateUser) -> AppResult<u
     Ok(new_user.insert(db).await?)
 }
 
-/// Validates the input and updates the fields that are present.
 pub async fn update(
     db: &impl ConnectionTrait,
     id: i32,
@@ -69,7 +60,6 @@ pub async fn update(
     Ok(user.update(db).await?)
 }
 
-/// Deletes a user or returns `AppError::NotFound`.
 pub async fn delete(db: &impl ConnectionTrait, id: i32) -> AppResult<()> {
     let result = users::Entity::delete_by_id(id).exec(db).await?;
     if result.rows_affected == 0 {
